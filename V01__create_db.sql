@@ -58,6 +58,9 @@ CREATE INDEX film_filmcrew_idx ON
 CREATE INDEX film_name_idx ON
     kinorepa.film(name);
 
+CREATE INDEX film_released_at_idx ON
+    kinorepa.film(released_at);
+
 CREATE TABLE kinorepa.filmcrew (
     id                  TEXT PRIMARY KEY,
 

@@ -47,6 +47,7 @@ CREATE TABLE kinorepa.film (
     rating_imdb         DECIMAL(5, 1) NOT NULL,
     rating              DECIMAL(5, 1) NOT NULL,
 
+    released_at         TIMESTAMPTZ NOT NULL,
     published_at        TIMESTAMPTZ NOT NULL,
     updated_at          TIMESTAMPTZ NOT NULL
 );

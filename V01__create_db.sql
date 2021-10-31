@@ -10,6 +10,7 @@ CREATE TABLE kinorepa.user (
 
     login               TEXT NOT NULL,
     name                TEXT NOT NULL,
+    email               TEXT NOT NULL,
     
     status              kinorepa.user_status_t NOT NULL,
 
@@ -96,4 +97,3 @@ CREATE TABLE kinorepa.review (
 
 CREATE INDEX review_user_id_idx ON
     kinorepa.review(user_id);
-    

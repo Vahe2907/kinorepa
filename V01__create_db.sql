@@ -97,3 +97,20 @@ CREATE TABLE kinorepa.review (
 
 CREATE INDEX review_user_id_idx ON
     kinorepa.review(user_id);
+
+CREATE TYPE kinorepa.wishlist_type_t as ENUM (
+    'liked',
+    'watch_later'
+);
+
+CREATE TABLE kinorepa.wishlist (
+    id                  TEXT PRIMARY KEY,
+
+    user_id             TEXT NOT NULL,
+    film_id             TEXT NOT NULL,
+
+    type                kinorepa.wishlist_type_t NOT NULL
+);
+
+CREATE INDEX wishlist_user_id_idx ON
+    kinorepa.wishlist(user_id);

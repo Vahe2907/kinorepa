@@ -6,7 +6,7 @@ CREATE TYPE kinorepa.user_status_t as ENUM (
 );
 
 CREATE TABLE kinorepa.user (
-    id                  TEXT PRIMARY KEY,
+    id                  GUID PRIMARY KEY,
 
     login               TEXT NOT NULL,
     name                TEXT NOT NULL,
@@ -33,12 +33,12 @@ CREATE TYPE kinorepa.film_genre_t as ENUM (
 );
 
 CREATE TABLE kinorepa.film (
-    id                  TEXT PRIMARY KEY,
-    filmcrew_id         TEXT NOT NULL,
+    id                  GUID PRIMARY KEY,
+    filmcrew_id         GUID NOT NULL,
 
     name                TEXT NOT NULL,
-    fees                INTEGER NOT NULL,
-    budget              INTEGER NOT NULL,
+    fees                MONEY NOT NULL,
+    budget              MONEY NOT NULL,
 
     genre               kinorepa.film_genre_t NOT NULL,
     duration            INTEGER NOT NULL,
@@ -62,7 +62,7 @@ CREATE INDEX film_released_at_idx ON
     kinorepa.film(released_at);
 
 CREATE TABLE kinorepa.filmcrew (
-    id                  TEXT PRIMARY KEY,
+    id                  GUID PRIMARY KEY,
 
     producer            TEXT NOT NULL,
     director            TEXT NOT NULL,
@@ -83,10 +83,10 @@ CREATE TYPE kinorepa.review_type_t as ENUM (
 );
 
 CREATE TABLE kinorepa.review (
-    id                  TEXT PRIMARY KEY,
+    id                  GUID PRIMARY KEY,
 
-    user_id             TEXT NOT NULL,
-    film_id             TEXT NOT NULL,
+    user_id             GUID NOT NULL,
+    film_id             GUID NOT NULL,
 
     score               DECIMAL(5,1) NOT NULL,
 
@@ -108,10 +108,10 @@ CREATE TYPE kinorepa.wishlist_type_t as ENUM (
 );
 
 CREATE TABLE kinorepa.wishlist (
-    id                  TEXT PRIMARY KEY,
+    id                  GUID PRIMARY KEY,
 
-    user_id             TEXT NOT NULL,
-    film_id             TEXT NOT NULL,
+    user_id            	GUID NOT NULL,
+    film_id             GUID NOT NULL,
 
     type                kinorepa.wishlist_type_t NOT NULL
 );

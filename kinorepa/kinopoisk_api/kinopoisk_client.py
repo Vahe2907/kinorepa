@@ -1,5 +1,7 @@
 import aiohttp
 
+from pprint import pprint
+
 
 class KinopoiskClient:
     """
@@ -30,21 +32,26 @@ class KinopoiskClient:
                     params=query,
                     json=body,
                 ) as response:
+                    print(response.status)
                     if response.status == 200:
                         response_json = await response.json()
                         return response_json
 
+                    response_json = await response.json()
+                    print(response_json)
                     return None
             except aiohttp.ClientConnectionError as err:
                 return None
 
     async def films_id_get(self, id: int):
-        endpoint = self._endpoints["films/{id}"]["get"]
+        endpoint = self._endpoints["films/{id}"]["get"].format(id)
         headers = {
             "X-API-KEY": self._api_key,
             "Content-Type": "application/json",
         }
 
-        response = await self._request('GET', endpoint, headers, {}, {})
+        response = await self._request("GET", endpoint, headers, {}, {})
+
+        pprint(response)
 
         return response

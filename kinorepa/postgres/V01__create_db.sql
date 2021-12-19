@@ -1,39 +1,34 @@
 CREATE SCHEMA kinorepa;
 
-CREATE TYPE kinorepa.user_status_t as ENUM (
-    'offline',
-    'online'
-);
+CREATE TABLE IF NOT EXISTS kinorepa.user (
+    id                  UUID PRIMARY KEY,
 
-CREATE TABLE kinorepa.user (
-    id                  GUID PRIMARY KEY,
-
-    login               VARCHAR(MAX) NOT NULL,
-    name                VARCHAR(MAX) NOT NULL,
-    email               VARCHAR(MAX) NOT NULL,
+    login               VARCHAR NOT NULL,
+    name                VARCHAR NOT NULL,
+    email               VARCHAR NOT NULL,
     
-    status              kinorepa.user_status_t NOT NULL,
+    is_online           BOOLEAN,
 
-    registered_at       TIMESTAMPTZ NOT NULL,
-    last_online_at      TIMESTAMPTZ NOT NULL
+    registered_at       TIMESTAMPTZ NOT NULL
 );
 
 CREATE INDEX user_login_idx ON 
     kinorepa.user(login);
 
-CREATE TYPE kinorepa.film_genre (
-    id                  GUID PRIMARY KEY,
+CREATE TABLE kinorepa.film_genre (
+    id                  UUID PRIMARY KEY,
 
-    genre_name          VARCHAR(MAX) NOT NULL
+    genre_name          VARCHAR NOT NULL
 );
 
 CREATE TABLE kinorepa.film (
-    id                  GUID PRIMARY KEY,
+    id                  UUID PRIMARY KEY,
 
-    filmcrew_id         GUID NOT NULL,
-    genre_id            GUID NOT NULL,
+    filmcrew_id         UUID NOT NULL,
+    genre_id            UUID NOT NULL,
+    actor_id            UUID NOT NULL,
 
-    name                VARCHAR(MAX) NOT NULL,
+    name                VARCHAR NOT NULL,
     fees                MONEY NOT NULL,
     budget              MONEY NOT NULL,
 
@@ -58,37 +53,37 @@ CREATE INDEX film_released_at_idx ON
     kinorepa.film(released_at);
 
 CREATE TABLE kinorepa.filmcrew (
-    id                  GUID PRIMARY KEY,
+    id                  UUID PRIMARY KEY,
 
-    producer            VARCHAR(MAX) NOT NULL,
-    director            VARCHAR(MAX) NOT NULL,
-    screenwriter        VARCHAR(MAX) NOT NULL,
-    operator            VARCHAR(MAX) NOT NULL
+    producer            VARCHAR NOT NULL,
+    director            VARCHAR NOT NULL,
+    screenwriter        VARCHAR NOT NULL,
+    operator            VARCHAR NOT NULL
 );
 
 CREATE TABLE kinorepa.review_status (
-    id                  GUID PRIMARY KEY,
+    id                  UUID PRIMARY KEY,
 
-    status_name         VARCHAR(MAX) NOT NULL
+    status_name         VARCHAR NOT NULL
 );
 
-CREATE TYPE kinorepa.review_type (
-    id                  GUID PRIMARY KEY,
+CREATE TABLE kinorepa.review_type (
+    id                  UUID PRIMARY KEY,
 
-    type_name           VARCHAR(MAX) NOT NULL
+    type_name           VARCHAR NOT NULL
 );
 
 CREATE TABLE kinorepa.review (
-    id                  GUID PRIMARY KEY,
+    id                  UUID PRIMARY KEY,
 
-    user_id             GUID NOT NULL,
-    film_id             GUID NOT NULL,
-    review_status_id    GUID NOT NULL,
-    review_type_id      GUID NOT NULL,
+    user_id             UUID NOT NULL,
+    film_id             UUID NOT NULL,
+    review_status_id    UUID NOT NULL,
+    review_type_id      UUID NOT NULL,
 
     score               DECIMAL(5,1) NOT NULL,
 
-    text                VARCHAR(MAX) NOT NULL
+    text                VARCHAR NOT NULL,
 
     created_at          TIMESTAMPTZ NOT NULL,
     updated_at          TIMESTAMPTZ NOT NULL
@@ -97,19 +92,26 @@ CREATE TABLE kinorepa.review (
 CREATE INDEX review_user_id_idx ON
     kinorepa.review(user_id);
 
-CREATE TYPE kinorepa.wishlist_type (
-    id                  GUID PRIMARY KEY,
+CREATE TABLE kinorepa.wishlist_type (
+    id                  UUID PRIMARY KEY,
 
-    type_name           VARCHAR(MAX) NOT NULL
+    type_name           VARCHAR NOT NULL
 );
 
 CREATE TABLE kinorepa.wishlist (
-    id                  GUID PRIMARY KEY,
+    id                  UUID PRIMARY KEY,
 
-    user_id            	GUID NOT NULL,
-    film_id             GUID NOT NULL,
-    type_id             GUID NOT NULL
+    user_id            	UUID NOT NULL,
+    film_id             UUID NOT NULL,
+    type_id             UUID NOT NULL
 );
 
 CREATE INDEX wishlist_user_id_idx ON
     kinorepa.wishlist(user_id);
+
+CREATE TABLE kinorepa.actor (
+    id                  UUID PRIMARY KEY,
+
+    first_name          VARCHAR NOT NULL,
+    second_name         VARCHAR NOT NULL
+)

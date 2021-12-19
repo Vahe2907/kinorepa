@@ -1,2 +1,6 @@
 aiohttp==3.7.4.post0
 pytest==5.4.3
+
+telebot~=0.0.4
+config~=0.5.1
+translator~=0.0.9

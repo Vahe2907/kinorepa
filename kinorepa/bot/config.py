@@ -1,0 +1,2 @@
+BOT_TOKEN = "5051169242:AAGWBMvo8fUYgUnSB_4QuO-iLgjHptkCd8g"
+FILE_WITH_USERS = "new.sqlite"

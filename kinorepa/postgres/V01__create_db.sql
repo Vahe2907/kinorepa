@@ -1,6 +1,6 @@
 CREATE SCHEMA kinorepa;
 
-CREATE TABLE IF NOT EXISTS kinorepa.user (
+CREATE TABLE kinorepa.user (
     id                  UUID PRIMARY KEY,
 
     login               VARCHAR NOT NULL,
@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS kinorepa.user (
     registered_at       TIMESTAMPTZ NOT NULL
 );
 
-CREATE INDEX user_login_idx ON 
+CREATE INDEX user_login_idx ON
     kinorepa.user(login);
 
 CREATE TABLE kinorepa.film_genre (

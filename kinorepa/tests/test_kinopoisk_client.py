@@ -1,4 +1,5 @@
 import pytest
+from pprint import pprint
 
 from kinorepa.kinopoisk_api import kinopoisk_client
 
@@ -66,3 +67,10 @@ async def test_films_id_get():
         "webUrl": "https://www.kinopoisk.ru/film/263531/",
         "year": 2012,
     }
+
+
+async def test_films_search():
+    film = await client.films_search_by_keyword_get("мстители")
+
+    pprint(film)
+    assert False

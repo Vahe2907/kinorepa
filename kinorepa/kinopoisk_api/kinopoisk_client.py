@@ -1,6 +1,5 @@
 import aiohttp
-
-from pprint import pprint
+from requests.adapters import Response
 
 
 class KinopoiskClient:
@@ -17,7 +16,13 @@ class KinopoiskClient:
         self._endpoints = {
             "films/{id}": {
                 "get": "https://kinopoiskapiunofficial.tech/api/v2.2/films/{}"
-            }
+            },
+            "films/{id}/facts": {
+                "get": "https://kinopoiskapiunofficial.tech/api/v2.2/films/{}/facts",
+            },
+            "films/search-by-keyword": {
+                "get": "https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword",
+            },
         }
 
     async def _request(
@@ -32,13 +37,11 @@ class KinopoiskClient:
                     params=query,
                     json=body,
                 ) as response:
-                    print(response.status)
                     if response.status == 200:
                         response_json = await response.json()
                         return response_json
 
                     response_json = await response.json()
-                    print(response_json)
                     return None
             except aiohttp.ClientConnectionError as err:
                 return None
@@ -51,7 +54,26 @@ class KinopoiskClient:
         }
 
         response = await self._request("GET", endpoint, headers, {}, {})
+        return response
 
-        pprint(response)
+    async def films_id_facts_get(self, id: int):
+        endpoint = self._endpoints["films/{id}/facts"]["get"].format(id)
+        headers = {
+            "X-API-KEY": self._api_key,
+            "Content-Type": "application/json",
+        }
 
+        response = await self._request("GET", endpoint, headers, {}, {})
+        return response
+
+    async def films_search_by_keyword_get(self, keyword: str):
+        endpoint = self._endpoints["films/search-by-keyword"]["get"]
+        headers = {
+            "X-API-KEY": self._api_key,
+            "Content-Type": "application/json",
+        }
+
+        response = await self._request(
+            "GET", endpoint, headers, {"keyword": keyword}, {}
+        )
         return response

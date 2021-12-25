@@ -14,8 +14,7 @@ class Film:
       - kinopoisk_id: int (идентификатор фильма в Кинопоиске)
       - imdb_id: int (идентификатор фильма в Imdb)
 
-      - name_ru: str (название фильма на русском)
-      - name_en: str (название фильма на английском)
+      - name: str (название фильма)
       - description: str (описание к фильму)
 
       - budget: int (бюджет фильма)
@@ -40,7 +39,7 @@ class Film:
         kinopoisk_id: int,
         imdb_id: int,
         name_ru: str,
-        name_en: str,
+        name_orig: str,
         description: str,
         budget: int,
         fees: int,
@@ -61,7 +60,7 @@ class Film:
         self._imdb_id = imdb_id
 
         self._name_ru = name_ru
-        self._name_en = name_en
+        self._name_orig = name_orig
         self._description = description
 
         self._budget = budget
@@ -77,6 +76,84 @@ class Film:
         self._updated_at = updated_at
         self._published_at = published_at
 
+    @property
+    def markdown_repr(self):
+        result = []
 
-def _get_film_by_kinopoisk_id(kinopoisk_id: int):
-    pass
+        if self._name_ru is not None:
+            result.append(f"*Название*: {self._name_ru}")
+
+            if self._name_orig is not None:
+                result[-1] += f" ({self._name_orig})"
+
+        if self._description is not None:
+            result.append(f"*Описание*: {self._description}")
+
+        if self._duration is not None:
+            result.append(f"*Длительность*: {self._duration} минут")
+
+        if self._rating_kinopoisk is not None:
+            ratings = []
+
+            ratings.append(f"*Рейтинги:*")
+            ratings.append(f"  - _Кинопоиск_: {self._rating_kinopoisk}")
+
+            if self._rating_imdb is not None:
+                ratings.append(f"  - _Imdb_: {self._rating_imdb}")
+
+            if self._rating_kinorepa is not None:
+                ratings.append(f"  - _Кинорепа:_: {self._rating_kinorepa}")
+
+            result.append("\n".join(ratings))
+
+        if self._release_year is not None:
+            result.append(f"*Год*: {self._release_year}")
+
+        return "\n\n".join(result)
+
+
+def parse(kinopoisk_film: dict):
+    id = kinopoisk_film["kinopoiskId"]
+
+    filmcrew_id = 0  # TODO
+    genre = kinopoisk_film["genres"][0]  # TODO
+
+    kinopoisk_id = kinopoisk_film["kinopoiskId"]
+    imdb_id = kinopoisk_film["imdbId"]
+
+    name_ru = kinopoisk_film["nameRu"]
+    name_orig = kinopoisk_film["nameOriginal"]
+    description = kinopoisk_film["description"]
+
+    budget = 100
+    fees = 100
+
+    duration = kinopoisk_film["filmLength"]
+
+    rating_kinopoisk = kinopoisk_film["ratingKinopoisk"]
+    rating_imdb = kinopoisk_film["ratingImdb"]
+    rating_kinorepa = None
+
+    release_year = kinopoisk_film["year"]
+    updated_at = datetime.datetime.now()
+    published_at = datetime.datetime.now()
+
+    return Film(
+        id,
+        filmcrew_id,
+        genre,
+        kinopoisk_id,
+        imdb_id,
+        name_ru,
+        name_orig,
+        description,
+        budget,
+        fees,
+        duration,
+        rating_kinopoisk,
+        rating_imdb,
+        rating_kinorepa,
+        release_year,
+        updated_at,
+        published_at,
+    )

@@ -1,0 +1,3 @@
+BOT_TOKEN = "5051169242:AAGWBMvo8fUYgUnSB_4QuO-iLgjHptkCd8g"
+API_KEY = "f83fc52f-813a-437e-8e4a-560bd3ddcb74"
+DATABASE_NAME = "kinorepa"

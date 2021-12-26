@@ -64,7 +64,7 @@ class KinopoiskClient:
         }
 
         response = await self._request("GET", endpoint, headers, {}, {})
-        return response
+        return response["items"]
 
     async def films_search_by_keyword_get(self, keyword: str):
         endpoint = self._endpoints["films/search-by-keyword"]["get"]

@@ -1,169 +1,233 @@
-import telebot
+# adding kinorepa directory
+import sys
+
+sys.path.append("../../kinorepa")
+
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+import typing
+
+from kinorepa.src import manager as kinorepa_manager
+
+genres_ = [
+    "Боевик",
+    "Комедии",
+    "Мультфильмы",
+    "Ужасы",
+    "Фантастика",
+    "Триллеры",
+    "Приключения",
+    "Детектив",
+    "Аниме",
+]
+years_ = ["До 1990", "1990 - 2000 гг.", "2000 - 2010 гг.", "После 2010"]
+durations_ = ["До 90 мин", "90 - 120 мин", "120 - 150 мин", "Более 150 мин"]
+rating_kp = ["< 4", "4 - 6", "6 - 8", "8 - 10"]
+rating_imdb = ["< 4", "4 - 6", "6 - 8", "8 - 10"]
 
 
-def change_keyboard(kb, call_back):
-    new_kb = {}
-    for i in range(len(kb.to_dict()["inline_keyboard"])):
-        for item in kb.to_dict()["inline_keyboard"][i]:
-            new_kb[item["callback_data"]] = item["text"]
-    if new_kb[call_back][-1] == "+":
-        new_kb[call_back] = new_kb[call_back][:-1]
-        result[int(call_back[0]) - 2].remove(new_kb[call_back])
+def _add_back_next_buttons(
+    prefix: str,
+    current_index: int,
+    indexes: typing.List[int],
+    inline_kb: InlineKeyboardMarkup,
+):
+    left_indexes = " ".join([str(index) for index in indexes[:6]])
+    right_indexes = " ".join([str(index) for index in indexes[6:13]])
+
+    left_data = f"{prefix}|b {current_index} {left_indexes}"
+    right_data = f"{prefix}|n {current_index} {right_indexes}"
+
+    kb_back = InlineKeyboardButton("<<", callback_data=left_data)
+    kb_next = InlineKeyboardButton(">>", callback_data=right_data)
+
+    inline_kb.add(kb_back, kb_next)
+
+
+def create_films_keyboard(
+    current_index: int,
+    indexes: typing.List[int],
+) -> InlineKeyboardMarkup:
+    inline_kb = InlineKeyboardMarkup()
+
+    _add_back_next_buttons("flm", current_index, indexes, inline_kb)
+
+    kb_like = InlineKeyboardButton("Мне нравится! 🧡", callback_data="liked")
+    kb_to_watch = InlineKeyboardButton(
+        "Добавить в «Смотреть позже»!", callback_data="to_watch"
+    )
+    kb_interesting_facts = InlineKeyboardButton(
+        "Интересные факты 💥", callback_data="facts"
+    )
+
+    inline_kb.add(kb_interesting_facts)
+    inline_kb.add(kb_like)
+    inline_kb.add(kb_to_watch)
+
+    return inline_kb
+
+
+def create_facts_keyboard(
+    current_index: int,
+    indexes: typing.List[int],
+):
+    inline_kb = InlineKeyboardMarkup()
+
+    _add_back_next_buttons("fct", current_index, indexes, inline_kb)
+
+    return inline_kb
+
+
+def filter_keyboard(name):
+    inline_kb = InlineKeyboardMarkup()
+    global genres_, years_, durations_, rating_kp, rating_imdb
+    if name == "start_find":
+        genres = InlineKeyboardButton("Жанр", callback_data="genre")
+        year = InlineKeyboardButton("Год выпуска", callback_data="year")
+        duration = InlineKeyboardButton("Длительность", callback_data="duration")
+        actors = InlineKeyboardButton("Актеры", callback_data="actors")
+        find = InlineKeyboardButton("Поиск!", callback_data="find_res")
+        rating_kp = InlineKeyboardButton(
+            "Рейтинг (Кинопоиск)", callback_data="rating_kp"
+        )
+        rating_imdb = InlineKeyboardButton(
+            "Рейтинг (IMDB)", callback_data="rating_imdb"
+        )
+        budget = InlineKeyboardButton("Бюджет", callback_data="_budget")
+        collection = InlineKeyboardButton("Кассовые сборы", callback_data="collection")
+
+        inline_kb.add(genres, year)
+        inline_kb.add(duration, actors)
+        inline_kb.add(rating_kp, rating_imdb)
+        inline_kb.add(budget, collection)
+        inline_kb.add(find)
+        return inline_kb
+    elif name == "genre":
+        for genre in genres_:
+            inline_kb.add(InlineKeyboardButton(genre, callback_data=genre))
+    elif name == "year":
+        for year in years_:
+            inline_kb.add(InlineKeyboardButton(year, callback_data=year))
+    elif name == "duration":
+        for dura in durations_:
+            inline_kb.add(InlineKeyboardButton(dura, callback_data=dura))
+    elif name == "rating_kp":
+        for rat in rating_kp:
+            inline_kb.add(InlineKeyboardButton(rat, callback_data=rat))
+    elif name == "rating_imdb":
+        for rat_imdb in rating_imdb:
+            inline_kb.add(InlineKeyboardButton(rat_imdb, callback_data=rat_imdb))
+
+    inline_kb.add(InlineKeyboardButton("Меню с фильтрами", callback_data="back"))
+    # inline_kb.add(InlineKeyboardButton("Следующий фильтр", callback_data="next"))
+    return inline_kb
+
+
+async def filter_films_listing(callback_query, bot):
+    message = callback_query.message
+    data = callback_query.data
+    if data == "genre":
+        await bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text="Выберите жанр",
+            reply_markup=filter_keyboard(data),
+        )
+    elif data == "year":
+        await bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text="Выберите год выпуска",
+            reply_markup=filter_keyboard(data),
+        )
+    elif data == "duration":
+        await bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text="Выберите длительность фильма",
+            reply_markup=filter_keyboard(data),
+        )
+    elif data == "rating_kp":
+        await bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text="Выберите рейтинг фильма на кинопоиске",
+            reply_markup=filter_keyboard(data),
+        )
+    elif data == "rating_imdb":
+        await bot.edit_message_text(
+            chat_id=message.chat.id,
+            message_id=message.message_id,
+            text="Выберите рейтинг фильма на IMDB",
+            reply_markup=filter_keyboard(data),
+        )
+
+
+def parse_listing_callback_data(message, data=None):
+    left_button, right_buttton = message.reply_markup.inline_keyboard[0]
+
+    if data is None:
+        data = message.reply_markup.inline_keyboard[0][0].callback_data
+    current_button, current_index = data.split()[0], int(data.split()[1])
+    indexes = list(
+        map(
+            int,
+            left_button.callback_data.split()[2:]
+            + right_buttton.callback_data.split()[2:],
+        )
+    )
+
+    return current_button, current_index, indexes
+
+
+async def handle_films_listing(callback_query, bot, db_manager):
+    data = callback_query.data
+    message = callback_query.message
+
+    current_button, current_index, indexes = parse_listing_callback_data(message, data)
+
+    if current_button == "flm|n":
+        next_index = current_index + 1
+    elif current_button == "flm|b":
+        next_index = current_index - 1
     else:
-        result[int(call_back[0]) - 2].add(new_kb[call_back])
-        new_kb[call_back] += "+"
+        raise RuntimeError()
 
-    final_kb = telebot.types.InlineKeyboardMarkup()
+    next_index %= len(indexes)
+    if next_index == current_index:
+        return
 
-    for val in new_kb.keys():
-        if new_kb[val] != "next" and new_kb[val] != "find" and new_kb[val] != "back":
-            final_kb.add(
-                telebot.types.InlineKeyboardButton(text=new_kb[val], callback_data=val)
-            )
-    kb_1 = telebot.types.InlineKeyboardButton(
-        text="next",
-        callback_data=list(new_kb.keys())[list(new_kb.values()).index("next")],
+    next_film = await kinorepa_manager.find_film_by_id(indexes[next_index], db_manager)
+    await bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=message.message_id,
+        text=next_film,
+        reply_markup=create_films_keyboard(next_index, indexes),
+        parse_mode="markdown",
     )
-    kb_2 = telebot.types.InlineKeyboardButton(
-        text="back",
-        callback_data=list(new_kb.keys())[list(new_kb.values()).index("back")],
+
+
+async def handle_film_facts(callback_query, bot, db_manager):
+    data = callback_query.data
+    message = callback_query.message
+
+    current_button, current_index, indexes = parse_listing_callback_data(message, data)
+
+    if current_button == "fct|n":
+        next_index = current_index + 1
+    elif current_button == "fct|b":
+        next_index = current_index - 1
+    else:
+        raise RuntimeError()
+
+    next_index %= len(indexes)
+    if next_index == current_index:
+        return
+
+    next_film = await kinorepa_manager.find_fact_by_id(indexes[next_index], db_manager)
+    await bot.edit_message_text(
+        chat_id=message.chat.id,
+        message_id=message.message_id,
+        text=next_film,
+        reply_markup=create_facts_keyboard(next_index, indexes),
+        parse_mode="markdown",
     )
-    kb_3 = telebot.types.InlineKeyboardButton(
-        text="find",
-        callback_data=list(new_kb.keys())[list(new_kb.values()).index("find")],
-    )
-    final_kb.add(kb_2, kb_3, kb_1)
-    return final_kb
-
-
-def keyboard(where_call):
-    kb = telebot.types.InlineKeyboardMarkup()
-
-    if where_call == "start":
-        kb_11 = telebot.types.InlineKeyboardButton(
-            text="my_filters", callback_data="1_1_inline"
-        )
-        kb_12 = telebot.types.InlineKeyboardButton(
-            text="rand", callback_data="1_2_inline"
-        )
-        kb.add(kb_11, kb_12)
-        return kb
-
-    elif where_call == "genre":
-        kb_21 = telebot.types.InlineKeyboardButton(
-            text="genre1", callback_data="2_1_inline"
-        )
-        kb_22 = telebot.types.InlineKeyboardButton(
-            text="genre2", callback_data="2_2_inline"
-        )
-        kb_23 = telebot.types.InlineKeyboardButton(
-            text="genre3", callback_data="2_3_inline"
-        )
-        kb_24 = telebot.types.InlineKeyboardButton(
-            text="genre4", callback_data="2_4_inline"
-        )
-        kb_25 = telebot.types.InlineKeyboardButton(
-            text="genre5", callback_data="2_5_inline"
-        )
-        kb.add(kb_21)
-        kb.add(kb_22)
-        kb.add(kb_23)
-        kb.add(kb_24)
-        kb.add(kb_25)
-        kb_26 = telebot.types.InlineKeyboardButton(
-            text="next", callback_data="2_6_inline"
-        )
-        kb_27 = telebot.types.InlineKeyboardButton(
-            text="back", callback_data="2_7_inline"
-        )
-        kb_28 = telebot.types.InlineKeyboardButton(
-            text="find", callback_data="2_8_inline"
-        )
-        kb.add(kb_27, kb_28, kb_26)
-        return kb
-
-    elif where_call == "duration":
-        # duration1 - time < 90 min
-        # duration2 - 90 min <= time <120 min
-        # duration - time >= 120 min
-        kb_31 = telebot.types.InlineKeyboardButton(
-            text="duration1", callback_data="3_1_inline"
-        )
-        kb_32 = telebot.types.InlineKeyboardButton(
-            text="duration2", callback_data="3_2_inline"
-        )
-        kb_33 = telebot.types.InlineKeyboardButton(
-            text="duration3", callback_data="3_3_inline"
-        )
-        kb_34 = telebot.types.InlineKeyboardButton(
-            text="next", callback_data="3_4_inline"
-        )
-        kb_35 = telebot.types.InlineKeyboardButton(
-            text="back", callback_data="3_5_inline"
-        )
-        kb_36 = telebot.types.InlineKeyboardButton(
-            text="find", callback_data="3_6_inline"
-        )
-        kb.add(kb_31)
-        kb.add(kb_32)
-        kb.add(kb_33)
-        kb.add(kb_35, kb_36, kb_34)
-        return kb
-
-    elif where_call == "rating":
-        kb_41 = telebot.types.InlineKeyboardButton(
-            text="rating_1", callback_data="4_1_inline"
-        )
-        kb_42 = telebot.types.InlineKeyboardButton(
-            text="rating_2", callback_data="4_2_inline"
-        )
-        kb_43 = telebot.types.InlineKeyboardButton(
-            text="rating_3", callback_data="4_3_inline"
-        )
-        kb_44 = telebot.types.InlineKeyboardButton(
-            text="rating_4", callback_data="4_4_inline"
-        )
-        kb_45 = telebot.types.InlineKeyboardButton(
-            text="next", callback_data="4_5_inline"
-        )
-        kb_46 = telebot.types.InlineKeyboardButton(
-            text="back", callback_data="4_6_inline"
-        )
-        kb_47 = telebot.types.InlineKeyboardButton(
-            text="find", callback_data="4_7_inline"
-        )
-        kb.add(kb_41)
-        kb.add(kb_42)
-        kb.add(kb_43)
-        kb.add(kb_44)
-        kb.add(kb_46, kb_47, kb_45)
-        return kb
-
-    elif where_call == "production_year":
-        kb_51 = telebot.types.InlineKeyboardButton(
-            text="year_1", callback_data="5_1_inline"
-        )
-        kb_52 = telebot.types.InlineKeyboardButton(
-            text="year_2", callback_data="5_2_inline"
-        )
-        kb_53 = telebot.types.InlineKeyboardButton(
-            text="year_3", callback_data="5_3_inline"
-        )
-        kb_54 = telebot.types.InlineKeyboardButton(
-            text="year_4", callback_data="5_4_inline"
-        )
-        kb_55 = telebot.types.InlineKeyboardButton(
-            text="next", callback_data="5_5_inline"
-        )
-        kb_56 = telebot.types.InlineKeyboardButton(
-            text="back", callback_data="5_6_inline"
-        )
-        kb_57 = telebot.types.InlineKeyboardButton(
-            text="find", callback_data="5_7_inline"
-        )
-        kb.add(kb_51)
-        kb.add(kb_52)
-        kb.add(kb_53)
-        kb.add(kb_54)
-        kb.add(kb_56, kb_57, kb_55)
-        return kb

@@ -1,4 +1,11 @@
+# adding kinorepa directory
+import sys
+
+sys.path.append("../../kinorepa")
+
 import datetime
+
+from kinorepa.utils import utils
 
 
 class Film:
@@ -9,7 +16,7 @@ class Film:
       - id: int (уникальный идентификатор)
 
       - filmcrew_id: int (идентификатор съёмочной команды)
-      - genre: str (жанр фильма)
+      - genres: str (жанр фильма)
 
       - kinopoisk_id: int (идентификатор фильма в Кинопоиске)
       - imdb_id: int (идентификатор фильма в Imdb)
@@ -35,7 +42,7 @@ class Film:
         self,
         id: int,
         filmcrew_id: int,
-        genre: str,
+        genres: str,
         kinopoisk_id: int,
         imdb_id: int,
         name_ru: str,
@@ -50,11 +57,12 @@ class Film:
         release_year: int,
         updated_at: datetime.datetime,
         published_at: datetime.datetime,
+        poster_url: str,
     ):
         self._id = id
 
         self._filmcrew_id = filmcrew_id
-        self._genre = genre
+        self._genres = genres
 
         self._kinopoisk_id = kinopoisk_id
         self._imdb_id = imdb_id
@@ -76,6 +84,8 @@ class Film:
         self._updated_at = updated_at
         self._published_at = published_at
 
+        self._poster_url = poster_url
+
     @property
     def markdown_repr(self):
         result = []
@@ -86,11 +96,17 @@ class Film:
             if self._name_orig is not None:
                 result[-1] += f" ({self._name_orig})"
 
+        if self._name_ru is None and self._name_orig is not None:
+            result.append(f"*Название*: {self._name_orig}")
+
         if self._description is not None:
             result.append(f"*Описание*: {self._description}")
 
         if self._duration is not None:
             result.append(f"*Длительность*: {self._duration} минут")
+
+        if self._genres is not None:
+            result.append(f"*Жанры*: {self._genres}")
 
         if self._rating_kinopoisk is not None:
             ratings = []
@@ -109,21 +125,47 @@ class Film:
         if self._release_year is not None:
             result.append(f"*Год*: {self._release_year}")
 
+        if self._poster_url is not None:
+            result.append(f"[Постер]({self._poster_url})")
+
         return "\n\n".join(result)
 
+    @property
+    def to_list(self):
+        return [
+            self._id,
+            self._filmcrew_id,
+            self._genres,
+            self._kinopoisk_id,
+            self._imdb_id,
+            self._name_ru,
+            self._name_orig,
+            self._description,
+            self._budget,
+            self._fees,
+            self._duration,
+            self._rating_kinopoisk,
+            self._rating_kinorepa,
+            self._rating_imdb,
+            self._release_year,
+            self._updated_at,
+            self._published_at,
+            self._poster_url,
+        ]
 
-def parse(kinopoisk_film: dict):
+
+def parse_kinopoisk(kinopoisk_film: dict):
     id = kinopoisk_film["kinopoiskId"]
 
     filmcrew_id = 0  # TODO
-    genre = kinopoisk_film["genres"][0]  # TODO
+    genres = ", ".join([genre["genre"] for genre in kinopoisk_film["genres"]])
 
     kinopoisk_id = kinopoisk_film["kinopoiskId"]
     imdb_id = kinopoisk_film["imdbId"]
 
     name_ru = kinopoisk_film["nameRu"]
     name_orig = kinopoisk_film["nameOriginal"]
-    description = kinopoisk_film["description"]
+    description = utils.parse_text(kinopoisk_film["description"])
 
     budget = 100
     fees = 100
@@ -138,10 +180,12 @@ def parse(kinopoisk_film: dict):
     updated_at = datetime.datetime.now()
     published_at = datetime.datetime.now()
 
+    poster_url = kinopoisk_film["posterUrl"]
+
     return Film(
         id,
         filmcrew_id,
-        genre,
+        genres,
         kinopoisk_id,
         imdb_id,
         name_ru,
@@ -156,4 +200,9 @@ def parse(kinopoisk_film: dict):
         release_year,
         updated_at,
         published_at,
+        poster_url,
     )
+
+
+def parse_db(args):
+    return Film(*args)

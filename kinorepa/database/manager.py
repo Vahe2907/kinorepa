@@ -65,7 +65,7 @@ class DBManager:
                 rating_imdb         DECIMAL(5, 1),
                 rating_kinorepa     DECIMAL(5, 1),
             
-                release_year        TIMESTAMPTZ,
+                release_year        INTEGER,
                 premiere_ru         TIMESTAMPTZ,
                 premiere_world      TIMESTAMPTZ,
 
@@ -189,19 +189,22 @@ class DBManager:
             print("An error occurred: ", err.args[0])
             self.connection.rollback()
 
-    def find_by_filters(self, genres, duration_min, duration_max, year_min, year_max):
-        self.cursor.execute(
-            f"""SELECT film_id FROM films
-            WHERE film.genre_id IN (
-                SELECT id FROM film_genre
-                WHERE ({genres} IS NULL OR film_genre.genre_name IN ({genres}))
+    def find_by_filters(self, genre, duration_min, duration_max, year_min, year_max):
+        print(duration_min)
+        try:
+            self.cursor.execute(
+                f"""
+                SELECT id FROM films
+                WHERE genres LIKE '%{genre}%'
+                AND ({duration_min} IS NULL OR duration >= {duration_min})
+                AND ({duration_max} IS NULL OR duration <= {duration_max})
+                AND ({year_min} IS NULL or release_year >= {year_min})
+                AND ({year_max} IS NULL or release_year <= {year_max})
+                """
             )
-            AND ({duration_min} IS NULL OR film.duration >= {duration_min})
-            AND ({duration_max} IS NULL OR film.duration <= {duration_max})
-            AND ({year_min} IS NULL OR  film.published_at >= make_timestamptz({year_min}, 01, 01, 0, 0, 1))
-            AND ({year_max} IS NULL OR  film.published_at <= make_timestamptz({year_max}, 01, 01, 0, 0, 1))"""
-        )
-        return self.cursor.fetchone()
+            return [item[0] for item in self.cursor.fetchall()]
+        except sqlite3.Error as err:
+            print("An error occurred:", err.args[0])
 
     def insert_film(self, film_to_insert: film.Film):
         try:
@@ -318,10 +321,10 @@ class DBManager:
     def add_to_watch_film(self, user_id, film_id):
         self.add_to_wishlist(user_id, film_id, 2)
 
-    def get_liked_films(self, user_id):
+    def liked_films(self, user_id):
         return self.get_film_ids_from_wishlist(user_id, 1)
 
-    def get_to_watch_films(self, user_id):
+    def to_watch_films(self, user_id):
         return self.get_film_ids_from_wishlist(user_id, 2)
 
     def get_film_ids_from_wishlist(self, user_id, wishlist_type):

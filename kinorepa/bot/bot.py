@@ -57,10 +57,10 @@ async def find(incoming_message: aiogram.types.Message):
     await create_listing_keyboard_by_ids(incoming_message, film_ids)
 
 
-@bot_dispatcher.message_handler(commands=["get_liked"])
-async def get_liked(incoming_message: aiogram.types.Message):
+@bot_dispatcher.message_handler(commands=["liked"])
+async def liked(incoming_message: aiogram.types.Message):
     from_user = incoming_message.from_user
-    film_ids = db_manager.get_liked_films(from_user.id)
+    film_ids = db_manager.liked_films(from_user.id)
 
     if film_ids is None:
         film_ids = list()
@@ -68,13 +68,13 @@ async def get_liked(incoming_message: aiogram.types.Message):
     await create_listing_keyboard_by_ids(incoming_message, film_ids)
 
 
-@bot_dispatcher.message_handler(commands=["get_to_watch"])
-async def get_to_watch(incoming_message: aiogram.types.Message):
+@bot_dispatcher.message_handler(commands=["to_watch"])
+async def to_watch(incoming_message: aiogram.types.Message):
     from_user = incoming_message.from_user
-    film_ids = db_manager.get_to_watch_films(from_user.id)
+    film_ids = db_manager.to_watch_films(from_user.id)
 
     if film_ids is None:
-        film_ids = list()
+        film_ids = []
 
     await create_listing_keyboard_by_ids(incoming_message, film_ids)
 
@@ -112,7 +112,7 @@ async def callback_liked(callback_query: aiogram.types.CallbackQuery):
     lambda callback_query: callback_query.data == "to_watch"
 )
 async def callback_to_watch(callback_query: aiogram.types.CallbackQuery):
-    from_user = callback_query.message.from_user
+    from_user = callback_query.from_user
     _, current_index, indexes = keyboard.parse_listing_callback_data(
         callback_query.message
     )
@@ -230,14 +230,14 @@ async def callback_genre(callback_query: aiogram.types.CallbackQuery):
     lambda callback_query: callback_query.data in keyboard.genres_
 )
 async def callback_genre(callback_query: aiogram.types.CallbackQuery):
-    await keyboard.update_filters_set(callback_query, "Жанры", db_manager)
+    await keyboard.update_filters_set(callback_query, "Жанры", bot, db_manager)
 
 
 @bot_dispatcher.callback_query_handler(
     lambda callback_query: callback_query.data in keyboard.years_
 )
 async def callback_genre(callback_query: aiogram.types.CallbackQuery):
-    await keyboard.update_filters_set(callback_query, "Год выпуска", db_manager)
+    await keyboard.update_filters_set(callback_query, "Годы выпусков", bot, db_manager)
 
 
 @bot_dispatcher.callback_query_handler(
@@ -245,7 +245,25 @@ async def callback_genre(callback_query: aiogram.types.CallbackQuery):
 )
 async def callback_genre(callback_query: aiogram.types.CallbackQuery):
     await keyboard.update_filters_set(
-        callback_query, "Продолжительность фильма", db_manager
+        callback_query, "Продолжительности фильмов", bot, db_manager
+    )
+
+
+@bot_dispatcher.callback_query_handler(
+    lambda callback_query: callback_query.data in keyboard.rating_kinopoisk
+)
+async def callback_genre(callback_query: aiogram.types.CallbackQuery):
+    await keyboard.update_filters_set(
+        callback_query, "Рейтинги на Кинопоиске", bot, db_manager
+    )
+
+
+@bot_dispatcher.callback_query_handler(
+    lambda callback_query: callback_query.data in keyboard.rating_imdb_
+)
+async def callback_genre(callback_query: aiogram.types.CallbackQuery):
+    await keyboard.update_filters_set(
+        callback_query, "Рейтинги на IMDB", bot, db_manager
     )
 
 
@@ -263,40 +281,62 @@ async def callback_filters_back(callback_query: aiogram.types.CallbackQuery):
     lambda callback_query: callback_query.data == "find_res"
 )
 async def callback_find_res(callback_query: aiogram.types.CallbackQuery):
-    filters = defaultdict(list, **db_manager.find_user_filters(callback_query.from_user.id))
-    print(f"""FILTERS: {filters}""")
+    message = callback_query.message
+
+    filters = defaultdict(list)
+
+    user_filters = db_manager.find_user_filters(callback_query.from_user.id)
+    for user_filter in user_filters:
+        filters[user_filter] = user_filters[user_filter]
+
     genres = filters["Жанры"]
-    print(genres)
-    
-    durations = filters["Длительность"]
+
+    durations = filters["Продолжительности фильмов"]
     duration_min, duration_max = "NULL", "NULL"
-    if (len(durations) > 0):
+    if len(durations) > 0:
         duration_segment = keyboard.duration_to_segment[durations[0]]
         duration_min, duration_max = duration_segment
-    print(duration_min, duration_max)
 
-    years = filters["Год выпуска"]
+    years = filters["Годы выпусков"]
     year_min, year_max = "NULL", "NULL"
-    if (len(years) > 0):
+    if len(years) > 0:
         year_segment = keyboard.years_to_segment[years[0]]
         year_min, year_max = year_segment
-    print(year_min, year_max)
 
-    film_ids = db_manager.find_by_filters(
-        genres,
-        duration_min,
-        duration_max,
-        year_min,
-        year_max)
-    
-    print(film_ids)
+    film_ids = []
+    if len(genres) == 0:
+        film_ids = db_manager.find_by_filters(
+            "", duration_min, duration_max, year_min, year_max
+        )
+        if film_ids is None:
+            film_ids = []
+    else:
+        for genre in genres:
+            found_film_ids = db_manager.find_by_filters(
+                genre.lower(), duration_min, duration_max, year_min, year_max
+            )
+            if found_film_ids is None:
+                found_film_ids = []
 
-    await callback_query.message.answer(
-        text="Ищем, ищем, ищем",
+            film_ids += found_film_ids
+
+    film_ids = list(set(film_ids))
+
+    if len(film_ids) == 0:
+        await message.answer(
+            text=translations.get("nothing_found"), parse_mode="markdown"
+        )
+        return
+
+    current_film = await kinorepa_manager.find_film_by_id(film_ids[0], db_manager)
+    await message.answer(
+        text=current_film,
+        parse_mode="markdown",
+        reply_markup=keyboard.create_films_keyboard(0, film_ids),
     )
 
 
-@bot_dispatcher.message_handler(commands=["filters"])
+@bot_dispatcher.message_handler(commands=["set_filters"])
 async def choose_filters(incoming_message: aiogram.types.Message):
     filters = {}
     db_manager.clear_user_filters(incoming_message.from_user.id)
@@ -306,12 +346,6 @@ async def choose_filters(incoming_message: aiogram.types.Message):
         text="Выберите фильтр",
         reply_markup=keyboard.filter_keyboard("start_find"),
     )
-
-
-@bot_dispatcher.message_handler(commands=["print"])
-async def afwaff(incoming_message: aiogram.types.Message):
-    db_manager.cursor.execute("SELECT * FROM user_filters")
-    print(db_manager.cursor.fetchall())
 
 
 if __name__ == "__main__":

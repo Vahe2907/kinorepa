@@ -23,6 +23,18 @@ years_ = ["До 1990", "1990 - 2000 гг.", "2000 - 2010 гг.", "После 201
 durations_ = ["До 90 мин", "90 - 120 мин", "120 - 150 мин", "Более 150 мин"]
 rating_kp = ["< 4", "4 - 6", "6 - 8", "8 - 10"]
 rating_imdb = ["< 4", "4 - 6", "6 - 8", "8 - 10"]
+duration_to_segment = {
+    ("До 90 мин", (0, 90)),
+    ("90 - 120 мин", (90, 120)),
+    ("120 - 150 мин", (120, 150)),
+    ("Более 150 мин", (150, 1000))
+}
+years_to_segment = {
+    ("До 1990", (0, 1990)),
+    ("1990 - 2000 гг.", (1990, 2000)),
+    ("2000 - 2010 гг.", (2000, 2010)),
+    ("После 2010", (2010, 2100)),
+}
 
 
 def _add_back_next_buttons(
@@ -58,10 +70,12 @@ def create_films_keyboard(
     kb_interesting_facts = InlineKeyboardButton(
         "Интересные факты 💥", callback_data="facts"
     )
+    kb_similars = InlineKeyboardButton("Похожие фильмы 🎥", callback_data="similars")
 
     inline_kb.add(kb_interesting_facts)
     inline_kb.add(kb_like)
     inline_kb.add(kb_to_watch)
+    inline_kb.add(kb_similars)
 
     return inline_kb
 
@@ -118,7 +132,6 @@ def filter_keyboard(name):
             inline_kb.add(InlineKeyboardButton(rat_imdb, callback_data=rat_imdb))
 
     inline_kb.add(InlineKeyboardButton("Меню с фильтрами", callback_data="back"))
-    # inline_kb.add(InlineKeyboardButton("Следующий фильтр", callback_data="next"))
     return inline_kb
 
 
@@ -154,12 +167,28 @@ async def filter_films_listing(callback_query, bot):
             reply_markup=filter_keyboard(data),
         )
     elif data == "rating_imdb":
+        print(data)
         await bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=message.message_id,
             text="Выберите рейтинг фильма на IMDB",
             reply_markup=filter_keyboard(data),
         )
+
+
+async def update_filters_set(callback_query, key_filter, db_manager):
+    selected_filters = db_manager.find_user_filters(callback_query.from_user.id)
+    print(selected_filters)
+    if selected_filters is None:
+        selected_filters = {}
+    data = callback_query.data
+    if key_filter not in selected_filters.keys():
+        selected_filters[key_filter] = []
+    if data in selected_filters[key_filter]:
+        selected_filters[key_filter].remove(data)
+    else:
+        selected_filters[key_filter].append(data)
+    db_manager.update_user_filters(callback_query.from_user.id, selected_filters)
 
 
 def parse_listing_callback_data(message, data=None):

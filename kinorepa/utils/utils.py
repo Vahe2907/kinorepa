@@ -25,3 +25,22 @@ def parse_text(text):
     text = text.replace("*", "^")
 
     return text
+
+
+def date_to_str(date):
+    months = [
+        "янв.",
+        "февр.",
+        "марта",
+        "апр.",
+        "мая",
+        "июня",
+        "июля",
+        "авг.",
+        "сент.",
+        "окт.",
+        "нояб.",
+        "дек.",
+    ]
+
+    return f"{date.day} {months[date.month - 1]} {date.year}"

@@ -4,6 +4,7 @@ import sys
 sys.path.append("../../kinorepa")
 
 import sqlite3
+import json
 import typing
 
 from kinorepa.models import film, fact
@@ -42,7 +43,7 @@ class DBManager:
                 id                  UUID PRIMARY KEY,
             
                 filmcrew_id         UUID,
-                genres               VARCHAR,
+                genres              VARCHAR,
 
                 kinopoisk_id        INTEGER NUT NULL,
                 imdb_id             INTEGER,
@@ -52,7 +53,11 @@ class DBManager:
                 description         VARCHAR,
 
                 budget              MONEY,
-                fees                MONEY,
+                marketing           MONEY,
+
+                fees_ru             MONEY,
+                fees_usa            MONEY,
+                fees_world          MONEY,
             
                 duration            INTEGER,
             
@@ -61,6 +66,9 @@ class DBManager:
                 rating_kinorepa     DECIMAL(5, 1),
             
                 release_year        TIMESTAMPTZ,
+                premiere_ru         TIMESTAMPTZ,
+                premiere_world      TIMESTAMPTZ,
+
                 updated_at          TIMESTAMPTZ NOT NULL,
                 published_at        TIMESTAMPTZ,
 
@@ -150,7 +158,14 @@ class DBManager:
                 
                 text                VARCHAR NOT NULL,
                 is_spoiler          INTEGER NOT NULL
-            )
+            );
+
+            CREATE TABLE IF NOT EXISTS user_filters (
+                id                  INTEGER PRIMARY KEY,
+
+                user_id             UUID NOT NULL,
+                filters             JSONB NOT NULL
+            );
         """
         )
 
@@ -169,21 +184,22 @@ class DBManager:
                 f"""INSERT INTO users VALUES(?, ?, ?, ?)""",
                 (user_id, login, name, registered_at),
             )
-            self.cursor.fetchone()
+            self.connection.commit()
         except sqlite3.Error as err:
             print("An error occurred: ", err.args[0])
+            self.connection.rollback()
 
-    def find_by_filters(self, genres, duration_min, duration_max, name, year):
+    def find_by_filters(self, genres, duration_min, duration_max, year_min, year_max):
         self.cursor.execute(
-            f"""SELECT * FROM film
-        WHERE film.genre_id IN (
-            SELECT id FROM film_genre
-            WHERE ({genres} IS NULL OR film_genre.genre_name IN ({genres}))
-        )
-        AND ({duration_min} IS NULL OR film.duration >= {duration_min})
-        AND ({duration_max} IS NULL OR film.duration <= {duration_max})
-        AND ({name} IS NULL OR film.name LIKE '%{name}%')
-        AND ({year} IS NULL OR  film.published_at > make_timestamptz({year}, 01, 01, 0, 0, 1))"""
+            f"""SELECT film_id FROM films
+            WHERE film.genre_id IN (
+                SELECT id FROM film_genre
+                WHERE ({genres} IS NULL OR film_genre.genre_name IN ({genres}))
+            )
+            AND ({duration_min} IS NULL OR film.duration >= {duration_min})
+            AND ({duration_max} IS NULL OR film.duration <= {duration_max})
+            AND ({year_min} IS NULL OR  film.published_at >= make_timestamptz({year_min}, 01, 01, 0, 0, 1))
+            AND ({year_max} IS NULL OR  film.published_at <= make_timestamptz({year_max}, 01, 01, 0, 0, 1))"""
         )
         return self.cursor.fetchone()
 
@@ -196,13 +212,17 @@ class DBManager:
                 VALUES (
                     ?, ?, ?, ?, ?, ?,
                     ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?
                 )
                 """,
                 film_to_insert.to_list,
             )
+
+            self.connection.commit()
         except sqlite3.Error as err:
             print("An error occurred:", err.args[0])
+            self.connection.rollback()
 
     def find_film_by_id(self, id: int) -> film.Film:
         try:
@@ -221,6 +241,7 @@ class DBManager:
             return None
         except sqlite3.Error as err:
             print("An error occurred:", err.args[0])
+            self.connection.rollback()
 
     def insert_facts(self, facts: typing.List[fact.Fact]):
         try:
@@ -237,8 +258,10 @@ class DBManager:
                 """,
                 [item.to_list for item in facts],
             )
+            self.connection.commit()
         except sqlite3.Error as err:
             print("An error occurred:", err.args[0])
+            self.connection.rollback()
 
     def find_facts_ids_by_film_id(self, film_id: int) -> typing.List[fact.Fact]:
         try:
@@ -284,8 +307,10 @@ class DBManager:
                 """,
                 [user_id, film_id, wishlist_type],
             )
+            self.connection.commit()
         except sqlite3.Error as err:
             print("An error occurred:", err.args[0])
+            self.connection.rollback()
 
     def add_liked_film(self, user_id, film_id):
         self.add_to_wishlist(user_id, film_id, 1)
@@ -311,3 +336,68 @@ class DBManager:
             return [item[0] for item in self.cursor.fetchall()]
         except sqlite3.Error as err:
             print("An error occurred:", err.args[0])
+
+    def insert_user_filters(self, user_id, filters):
+        try:
+            self.cursor.execute(
+                f"""
+                INSERT INTO user_filters(
+                    user_id, filters
+                ) VALUES (
+                    ?, ?
+                )
+                """,
+                [user_id, json.dumps(filters)],
+            )
+            self.connection.commit()
+        except sqlite3.Error as err:
+            print("An error occurred:", err.args[0])
+            self.connection.rollback()
+
+    def update_user_filters(self, user_id, filters):
+        try:
+            self.cursor.execute(
+                f"""
+                UPDATE user_filters SET 
+                    filters=?
+                WHERE
+                    user_id=?
+                """,
+                [json.dumps(filters), user_id],
+            )
+            self.connection.commit()
+        except sqlite3.Error as err:
+            print("An error occurred:", err.args[0])
+            self.connection.rollback()
+
+    def find_user_filters(self, user_id):
+        try:
+            self.cursor.execute(
+                """
+                SELECT
+                    filters
+                FROM user_filters WHERE
+                    user_id = ?
+                """,
+                [user_id],
+            )
+            result = self.cursor.fetchone()
+            if result is None:
+                return None
+
+            return json.loads(result[0])
+        except sqlite3.Error as err:
+            print("An error occurred:", err.args[0])
+
+    def clear_user_filters(self, user_id):
+        try:
+            self.cursor.execute(
+                f"""
+                DELETE from user_filters WHERE user_id = ?
+                """,
+                [user_id],
+            )
+            self.connection.commit()
+        except sqlite3.Error as err:
+            print("An error occurred:", err.args[0])
+            self.connection.rollback()

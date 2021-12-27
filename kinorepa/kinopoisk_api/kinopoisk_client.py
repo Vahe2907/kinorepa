@@ -20,6 +20,15 @@ class KinopoiskClient:
             "films/{id}/facts": {
                 "get": "https://kinopoiskapiunofficial.tech/api/v2.2/films/{}/facts",
             },
+            "films/{id}/box_office": {
+                "get": "https://kinopoiskapiunofficial.tech/api/v2.2/films/{}/box_office",
+            },
+            "films/{id}/distributions": {
+                "get": "https://kinopoiskapiunofficial.tech/api/v2.2/films/{}/distributions",
+            },
+            "films/{id}/similars": {
+                "get": "https://kinopoiskapiunofficial.tech/api/v2.2/films/{}/similars",
+            },
             "films/search-by-keyword": {
                 "get": "https://kinopoiskapiunofficial.tech/api/v2.1/films/search-by-keyword",
             },
@@ -58,6 +67,36 @@ class KinopoiskClient:
 
     async def films_id_facts_get(self, id: int):
         endpoint = self._endpoints["films/{id}/facts"]["get"].format(id)
+        headers = {
+            "X-API-KEY": self._api_key,
+            "Content-Type": "application/json",
+        }
+
+        response = await self._request("GET", endpoint, headers, {}, {})
+        return response["items"]
+
+    async def films_id_box_office_get(self, id: int):
+        endpoint = self._endpoints["films/{id}/box_office"]["get"].format(id)
+        headers = {
+            "X-API-KEY": self._api_key,
+            "Content-Type": "application/json",
+        }
+
+        response = await self._request("GET", endpoint, headers, {}, {})
+        return response["items"]
+
+    async def films_id_distributions_get(self, id: int):
+        endpoint = self._endpoints["films/{id}/distributions"]["get"].format(id)
+        headers = {
+            "X-API-KEY": self._api_key,
+            "Content-Type": "application/json",
+        }
+
+        response = await self._request("GET", endpoint, headers, {}, {})
+        return response["items"]
+
+    async def films_id_similars_get(self, id: int):
+        endpoint = self._endpoints["films/{id}/similars"]["get"].format(id)
         headers = {
             "X-API-KEY": self._api_key,
             "Content-Type": "application/json",

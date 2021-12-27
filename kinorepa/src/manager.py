@@ -22,6 +22,12 @@ async def find_film_by_keyword(keyword: str) -> typing.List[int]:
     return [item["filmId"] for item in response["films"]]
 
 
+async def find_similar_films_by_film_id(id: int) -> typing.List[int]:
+    response = await client.films_id_similars_get(id)
+
+    return [item["filmId"] for item in response]
+
+
 async def find_film_by_id(id: int, db_manager: database_manager.DBManager) -> film.Film:
     kinorepa_film = db_manager.find_film_by_id(id)
 
@@ -30,7 +36,7 @@ async def find_film_by_id(id: int, db_manager: database_manager.DBManager) -> fi
 
     kinopoisk_film = await client.films_id_get(id)
 
-    kinorepa_film = film.parse_kinopoisk(kinopoisk_film)
+    kinorepa_film = await film.parse_kinopoisk(kinopoisk_film, client)
     db_manager.insert_film(kinorepa_film)
 
     return kinorepa_film.markdown_repr
